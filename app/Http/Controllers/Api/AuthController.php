@@ -108,33 +108,48 @@ class AuthController extends Controller
 
     public function me()
     {
-        $user = JWTAuth::parseToken()->authenticate();
-        $token = JWTAuth::getToken();
-        $payload = JWTAuth::getPayload();
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            $token = JWTAuth::getToken();
+            $payload = JWTAuth::getPayload();
 
-        $expiration = $payload->get('exp');
-        $expiration_time = date('Y-m-d H:i:s', $expiration);
+            $expiration = $payload->get('exp');
+            $expiration_time = date('Y-m-d H:i:s', $expiration);
 
-        $data['name'] = $user['name'];
-        $data['email'] = $user['email'];
-        $data['exp'] = $expiration_time;
+            $data['name'] = $user['name'];
+            $data['email'] = $user['email'];
+            $data['exp'] = $expiration_time;
 
-        return response()->json(ApiFormatter::createJson(200, 'Logged in User', $data), 200);
+            return response()->json(ApiFormatter::createJson(200, 'Logged in User', $data), 200);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+            return response()->json(ApiFormatter::createJson(401, 'Token expired'), 401);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            return response()->json(ApiFormatter::createJson(401, 'Token invalid'), 401);
+        } catch (\Exception $e) {
+            return response()->json(ApiFormatter::createJson(500, 'Internal Server Error', $e->getMessage()), 500);
+        }
     }
 
     public function refresh()
     {
-        $currentDateTime = Carbon::now();
-        $expirationDateTime = $currentDateTime->addSeconds(JWTAuth::factory()->getTTL() * 60);
+        try {
+            $newToken = JWTAuth::refresh(JWTAuth::getToken());
 
-        $info = [
-            'type' => 'Bearer',
-            'token' => JWTAuth::refresh(),
-            'expires' => $expirationDateTime->format('Y-m-d H:i:s')
-        ];
+            $expiration = JWTAuth::factory()->getTTL() * 60;
+            $expirationDateTime = Carbon::now()->addSeconds($expiration);
 
-        return response()->json(ApiFormatter::createJson(200, 'Succesfuly Refreshed', $info), 200);
+            $info = [
+                'type' => 'Bearer',
+                'token' => $newToken,
+                'expires' => $expirationDateTime->format('Y-m-d H:i:s'),
+            ];
+
+            return response()->json(ApiFormatter::createJson(200, 'Successfully Refreshed', $info), 200);
+        } catch (\Exception $e) {
+            return response()->json(ApiFormatter::createJson(500, 'Token refresh failed', $e->getMessage()), 500);
+        }
     }
+
 
     public function logout()
     {
