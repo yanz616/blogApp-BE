@@ -25,6 +25,7 @@ class AuthController extends Controller
                     'name' => 'required|string|max:255',
                     'email' => 'required|email|unique:users,email',
                     'password' => 'required|string|min:6|confirmed',
+                    'role' => 'sometimes|in:admin,user',
                 ],
                 [
                     'name.required' => 'Name is required',
@@ -46,6 +47,7 @@ class AuthController extends Controller
                 'name' => $params['name'],
                 'email' => $params['email'],
                 'password' => Hash::make($params['password']),
+                'role' => $request->role ?? 'user',
             ]);
 
             // Respond with success
@@ -155,5 +157,65 @@ class AuthController extends Controller
     {
         JWTAuth::invalidate(JWTAuth::getToken());
         return response()->json(ApiFormatter::createJson(200, 'Succes Logout'), 200);
+    }
+
+    /**
+     * Hapus postingan yang tidak pantas berdasarkan ID (hanya untuk admin).
+     */
+    public function deletePost($id)
+    {
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return response()->json(ApiFormatter::createJson(403, 'Access Denied'), 403);
+        }
+
+        $post = Post::find($id);
+
+        if (!$post) {
+            return response()->json(ApiFormatter::createJson(404, 'Post not found'), 404);
+        }
+
+        $post->delete();
+
+        return response()->json(ApiFormatter::createJson(200, 'Post deleted successfully'));
+    }
+
+    /**
+     * Hapus komentar yang tidak pantas berdasarkan ID (hanya untuk admin).
+     */
+    public function deleteComment($id)
+    {
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return response()->json(ApiFormatter::createJson(403, 'Access Denied'), 403);
+        }
+
+        $comment = Comment::find($id);
+
+        if (!$comment) {
+            return response()->json(ApiFormatter::createJson(404, 'Comment not found'), 404);
+        }
+
+        $comment->delete();
+
+        return response()->json(ApiFormatter::createJson(200, 'Comment deleted successfully'));
+    }
+
+    /**
+     * Menampilkan daftar semua pengguna (hanya untuk admin).
+     */
+    public function index()
+    {
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return response()->json(ApiFormatter::createJson(403, 'Access Denied'), 403);
+        }
+
+        $users = User::all();
+
+        return response()->json(ApiFormatter::createJson(200, 'Success', $users));
     }
 }

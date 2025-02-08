@@ -24,6 +24,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
+        'role',
     ];
 
     //relasi one to many: user memiliki banyak post
@@ -43,6 +44,13 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsToMany(Post::class, 'likes')->withTimestamps();
     }
+
+    //menentukan role
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
 
     /**
      * The attributes that should be hidden for serialization.
