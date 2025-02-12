@@ -219,3 +219,4 @@ class AuthController extends Controller
         return response()->json(ApiFormatter::createJson(200, 'Success', $users));
     }
 }
+use App\Http\Controllers\AdminController;
