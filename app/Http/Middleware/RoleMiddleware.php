@@ -1,22 +1,32 @@
 <?php
-
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Symfony\Component\HttpFoundation\Response;
+use Exception;
 
 class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, $role)
     {
-        $user = JWTAuth::parseToken()->authenticate();
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
 
-        if (!$user || $user->role !== $role) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            // Jika pengguna tidak ditemukan
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized - User Not Found'], 403);
+            }
+
+            // Cek apakah role cocok
+            $roles = explode('|', $role); // Memungkinkan banyak role seperti "admin|superadmin"
+            if (!in_array($user->role, $roles)) {
+                return response()->json(['error' => 'Unauthorized - Access Denied'], 403);
+            }
+
+            return $next($request);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Unauthorized - Invalid Token'], 401);
         }
-
-        return $next($request);
     }
 }
