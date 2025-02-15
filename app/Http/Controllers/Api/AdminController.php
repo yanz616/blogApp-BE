@@ -1,42 +1,62 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Helpers\ApiFormatter;
 use App\Models\User;
 use App\Models\Post;
 use App\Models\Comment;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class AdminController extends Controller
 {
-    // Menampilkan semua user KECUALI admin
+    /**
+     * Menampilkan semua user kecuali admin
+     */
     public function index()
     {
         $users = User::where('role', '!=', 'admin')->get();
-        return response()->json($users, 200);
+
+        if ($users->isEmpty()) {
+            return ApiFormatter::createJson(404, 'Tidak ada user yang ditemukan');
+        }
+
+        return ApiFormatter::createJson(200, 'Daftar user berhasil diambil', $users);
     }
 
-    // Menghapus post dengan validasi
+    /**
+     * Menghapus post berdasarkan ID dengan validasi
+     */
     public function deletePost($id)
     {
-        $post = Post::find($id);
-        if (!$post) {
-            return response()->json(['error' => 'Post not found'], 404);
-        }
+        try {
+            $post = Post::findOrFail($id);
+            $post->delete();
 
-        $post->delete();
-        return response()->json(['message' => 'Post deleted successfully'], 200);
+            return ApiFormatter::createJson(200, 'Post berhasil dihapus');
+        } catch (ModelNotFoundException $e) {
+            return ApiFormatter::createJson(404, 'Post tidak ditemukan');
+        } catch (\Exception $e) {
+            return ApiFormatter::createJson(500, 'Gagal menghapus post', ['error' => $e->getMessage()]);
+        }
     }
 
-    // Menghapus komentar dengan validasi
+    /**
+     * Menghapus komentar berdasarkan ID dengan validasi
+     */
     public function deleteComment($id)
     {
-        $comment = Comment::find($id);
-        if (!$comment) {
-            return response()->json(['error' => 'Comment not found'], 404);
-        }
+        try {
+            $comment = Comment::findOrFail($id);
+            $comment->delete();
 
-        $comment->delete();
-        return response()->json(['message' => 'Comment deleted successfully'], 200);
+            return ApiFormatter::createJson(200, 'Komentar berhasil dihapus');
+        } catch (ModelNotFoundException $e) {
+            return ApiFormatter::createJson(404, 'Komentar tidak ditemukan');
+        } catch (\Exception $e) {
+            return ApiFormatter::createJson(500, 'Gagal menghapus komentar', ['error' => $e->getMessage()]);
+        }
     }
 }
